@@ -1,6 +1,8 @@
 import 'dart:io';
 
-import 'ler_planilha.dart' show estaDentroDaTolerancia;
+// import 'ler_planilha.dart' show estaDentroDaTolerancia;
+import 'package:backend/processador_calibracao.dart'
+    show estaDentroDaTolerancia;
 
 void main() {
   var falhas = 0;
