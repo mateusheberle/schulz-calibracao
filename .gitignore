@@ -1,0 +1,5 @@
+venv
+.venv
+certificados_db.json
+.vscode/
+__pycache__/

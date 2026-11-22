@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SCHULZ S.A. | Laboratório Central de Metrologia</title>
+  <style>
+    :root {
+      --azul-escuro: #002B49;
+      --azul-medio: #004B87;
+      --laranja-schulz: #E35205;
+      --cinza-fundo: #F4F6F9;
+      --cinza-borda: #E2E8F0;
+      --verde-bg: #C6F6D5;
+      --verde-texto: #22543D;
+      --verde-borda: #38A169;
+      --vermelho-bg: #FED7D7;
+      --vermelho-texto: #742A2A;
+      --vermelho-borda: #E53E3E;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Segoe UI', Roboto, Arial, sans-serif;
+      background: var(--cinza-fundo);
+      color: #1A202C;
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+    }
+    header {
+      height: 70px;
+      background: var(--azul-escuro);
+      padding: 0 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      color: #fff;
+    }
+    .brand { display: flex; align-items: center; gap: 16px; }
+    .brand-title { font-size: 22px; font-weight: 700; letter-spacing: 1.5px; }
+    .brand-title span { color: var(--laranja-schulz); }
+    .divider-v { height: 24px; width: 1px; background: rgba(255,255,255,0.3); }
+    .brand-sub { color: rgba(255,255,255,0.75); font-size: 14px; }
+    .profile { display: flex; align-items: center; gap: 10px; text-align: right; }
+    .profile-name { font-size: 12px; font-weight: 700; }
+    .profile-role { font-size: 10px; color: rgba(255,255,255,0.75); }
+    .avatar {
+      width: 32px; height: 32px; border-radius: 50%;
+      background: var(--laranja-schulz);
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 700; font-size: 12px;
+    }
+    .workspace { display: flex; flex: 1; }
+    aside {
+      width: 240px;
+      background: #fff;
+      border-right: 1px solid var(--cinza-borda);
+      padding: 20px 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .nav-btn {
+      width: 100%;
+      text-align: left;
+      background: transparent;
+      border: none;
+      padding: 12px 14px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 500;
+      color: #4A5568;
+      cursor: pointer;
+      transition: 0.15s;
+    }
+    .nav-btn:hover { background: #EDF2F7; }
+    .nav-btn.active {
+      background: rgba(0, 43, 73, 0.08);
+      color: var(--azul-escuro);
+      font-weight: 700;
+      border-left: 4px solid var(--laranja-schulz);
+    }
+    main { flex: 1; padding: 28px; overflow-y: auto; }
+    .tab-panel { display: none; max-width: 1080px; margin: 0 auto; }
+    .tab-panel.active { display: block; }
+    .card {
+      background: #fff;
+      border: 1px solid var(--cinza-borda);
+      border-radius: 10px;
+      padding: 28px;
+      margin-bottom: 20px;
+    }
+    h2 { color: var(--azul-escuro); font-size: 20px; margin-bottom: 6px; }
+    .subtitle { color: #718096; font-size: 14px; margin-bottom: 20px; }
+    .dropzone {
+      border: 2px dashed #CBD5E0;
+      border-radius: 10px;
+      padding: 36px 20px;
+      text-align: center;
+      background: #F8FAFC;
+      cursor: pointer;
+      transition: 0.2s;
+    }
+    .dropzone:hover { border-color: var(--azul-escuro); background: #EDF2F7; }
+    .file-info {
+      margin-top: 14px; padding: 10px 14px;
+      background: #EBF8FF; border: 1px solid #BEE3F8;
+      border-radius: 6px; color: #2B6CB0; font-size: 13px; font-weight: 600;
+      display: none;
+    }
+    .btn {
+      background: var(--azul-escuro);
+      color: #fff;
+      border: none;
+      padding: 11px 20px;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .btn-orange { background: var(--laranja-schulz); }
+    .banner {
+      padding: 16px 24px;
+      border-radius: 8px;
+      font-weight: 700;
+      font-size: 15px;
+      text-align: center;
+      margin-bottom: 18px;
+    }
+    .banner.aprovado { background: var(--verde-bg); color: var(--verde-texto); border: 2px solid var(--verde-borda); }
+    .banner.reprovado { background: var(--vermelho-bg); color: var(--vermelho-texto); border: 2px solid var(--vermelho-borda); }
+    .kpis { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-bottom: 18px; }
+    .kpi { background: #F8FAFC; border: 1px solid var(--cinza-borda); border-radius: 8px; padding: 14px; }
+    .kpi-label { font-size: 12px; color: #718096; }
+    .kpi-val { font-size: 22px; font-weight: 700; color: var(--azul-escuro); margin-top: 4px; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 14px; }
+    th, td { border: 1px solid #CBD5E0; padding: 9px 10px; text-align: right; }
+    th { background: var(--azul-escuro); color: #fff; text-align: center; }
+    td:first-child { text-align: left; font-weight: 600; }
+    td:last-child { text-align: center; font-weight: 700; }
+    .ok { color: #2F855A; }
+    .nok { color: #C53030; }
+    .error-msg { color: var(--vermelho-texto); background: var(--vermelho-bg); padding: 10px 14px; border-radius: 6px; margin-top: 14px; font-size: 13px; }
+    .input-row { display: flex; gap: 12px; margin-top: 14px; }
+    input[type="text"] {
+      flex: 1; padding: 11px 14px; border: 1px solid #CBD5E0; border-radius: 6px; font-size: 14px;
+    }
+    .hist-item {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 14px 16px; border: 1px solid var(--cinza-borda); border-radius: 8px;
+      margin-bottom: 10px; background: #fff;
+    }
+    footer {
+      height: 40px;
+      background: #fff;
+      border-top: 1px solid var(--cinza-borda);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 11px; color: #718096;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="brand">
+      <div class="brand-title">SCHULZ <span>S.A.</span></div>
+      <div class="divider-v"></div>
+      <div class="brand-sub">Laboratório Central de Metrologia</div>
+    </div>
+    <div class="profile">
+      <div>
+        <div class="profile-name">João Carlos Oliveira</div>
+        <div class="profile-role">Signatário Autorizado</div>
+      </div>
+      <div class="avatar">JC</div>
+    </div>
+  </header>
+
+  <div class="workspace">
+    <aside>
+      <button class="nav-btn active" onclick="mudarAba(0)">1. Ingestão (MMC)</button>
+      <button class="nav-btn" onclick="mudarAba(1)">2. Minuta & Revisão</button>
+      <button class="nav-btn" onclick="mudarAba(2)">3. Validador QR Code</button>
+      <button class="nav-btn" onclick="mudarAba(3)">4. Histórico</button>
+    </aside>
+
+    <main>
+      <!-- ABA 1: INGESTÃO -->
+      <section id="aba-0" class="tab-panel active">
+        <div class="card">
+          <h2>Ingestão de Registro Metrológico (MMC)</h2>
+          <p class="subtitle">Selecione a planilha Excel (.xlsx) exportada da Máquina de Medir por Coordenadas Carl Zeiss.</p>
+          <div class="dropzone" onclick="document.getElementById('fileInput').click()">
+            <strong>Clique para selecionar a planilha .xlsx</strong><br>
+            <span style="font-size:12px; color:#718096;">Formato aceito: .xlsx (máx. 5 MiB)</span>
+            <input type="file" id="fileInput" accept=".xlsx" style="display:none" onchange="selecionarArquivo(this)">
+          </div>
+          <div id="fileInfo" class="file-info"></div>
+          <div id="erroIngestao" class="error-msg" style="display:none"></div>
+          <div style="margin-top:20px;">
+            <button id="btnProcessar" class="btn btn-orange" disabled onclick="processarArquivo()">Processar Arquivo</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- ABA 2: MINUTA & REVISÃO -->
+      <section id="aba-1" class="tab-panel">
+        <div class="card" id="revisaoVazia">
+          <h2>Minuta & Revisão Técnica</h2>
+          <p class="subtitle">Nenhum arquivo processado nesta sessão. Envie uma planilha na aba 1. Ingestão (MMC).</p>
+        </div>
+        <div class="card" id="revisaoConteudo" style="display:none">
+          <div id="bannerParecer" class="banner"></div>
+          <div class="kpis">
+            <div class="kpi"><div class="kpi-label">Total de Características</div><div class="kpi-val" id="kpiTotal">0</div></div>
+            <div class="kpi"><div class="kpi-label">Dentro da Tolerância</div><div class="kpi-val ok" id="kpiDentro">0</div></div>
+            <div class="kpi"><div class="kpi-label">Fora da Tolerância</div><div class="kpi-val nok" id="kpiFora">0</div></div>
+          </div>
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+            <div style="font-size:13px; color:#4A5568;">
+              Certificado: <strong id="revCertId"></strong> &nbsp;|&nbsp; Emissão: <span id="revEmissao"></span>
+            </div>
+            <button class="btn" onclick="baixarPdf()">Baixar Certificado Oficial (PDF com QR Code)</button>
+          </div>
+          <table>
+            <thead>
+              <tr>
+                <th>Característica</th>
+                <th>Nominal</th>
+                <th>Média</th>
+                <th>Erro</th>
+                <th>Tol. Inferior</th>
+                <th>Tol. Superior</th>
+                <th>Situação</th>
+              </tr>
+            </thead>
+            <tbody id="tabelaCotas"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ABA 3: VALIDADOR QR CODE -->
+      <section id="aba-2" class="tab-panel">
+        <div class="card" style="max-width:720px; margin:0 auto;">
+          <h2>Validador de Autenticidade (QR Code)</h2>
+          <p class="subtitle">Informe o código SCH-AAAA-XXXXXX impresso no certificado ou cole o texto lido pelo QR Code.</p>
+          <div class="input-row">
+            <input type="text" id="codigoValidar" placeholder="Ex: SCH-2026-XXXXXX" onkeydown="if(event.key==='Enter') validarCertificado()">
+            <button class="btn" onclick="validarCertificado()">Validar</button>
+          </div>
+          <div id="erroValidacao" class="error-msg" style="display:none"></div>
+          <div id="resultadoValidacao" style="display:none; margin-top:18px;"></div>
+        </div>
+      </section>
+
+      <!-- ABA 4: HISTÓRICO -->
+      <section id="aba-3" class="tab-panel">
+        <div class="card">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+            <div>
+              <h2>Histórico de Calibrações</h2>
+              <p class="subtitle" style="margin-bottom:0;">Certificados emitidos e persistidos localmente.</p>
+            </div>
+            <button class="btn" onclick="carregarHistorico()">Atualizar</button>
+          </div>
+          <div id="listaHistorico">Carregando...</div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <footer>
+    SCHULZ S.A. - Planta Joinville/SC | Projeto Aplicado III - UniSENAI Digital (Equipe nº 03)
+  </footer>
+
+  <script>
+    let arquivoAtual = null;
+    let resultadoAtual = null;
+
+    function mudarAba(indice) {
+      document.querySelectorAll('.tab-panel').forEach((el, i) => el.classList.toggle('active', i === indice));
+      document.querySelectorAll('.nav-btn').forEach((el, i) => el.classList.toggle('active', i === indice));
+      if (indice === 3) carregarHistorico();
+    }
+
+    function fmtNum(v) {
+      return Number(v).toFixed(7).replace('.', ',');
+    }
+
+    function selecionarArquivo(input) {
+      const erroEl = document.getElementById('erroIngestao');
+      const infoEl = document.getElementById('fileInfo');
+      const btn = document.getElementById('btnProcessar');
+      erroEl.style.display = 'none';
+
+      if (!input.files || !input.files.length) return;
+      const file = input.files[0];
+      if (!file.name.toLowerCase().endsWith('.xlsx')) {
+        erroEl.textContent = 'Selecione um arquivo no formato .xlsx.';
+        erroEl.style.display = 'block';
+        btn.disabled = true;
+        return;
+      }
+      arquivoAtual = file;
+      infoEl.textContent = `Arquivo selecionado: ${file.name} (${(file.size / 1024).toFixed(1)} KB)`;
+      infoEl.style.display = 'block';
+      btn.disabled = false;
+    }
+
+    async function processarArquivo() {
+      if (!arquivoAtual) return;
+      const btn = document.getElementById('btnProcessar');
+      const erroEl = document.getElementById('erroIngestao');
+      btn.disabled = true;
+      btn.textContent = 'Processando...';
+      erroEl.style.display = 'none';
+
+      try {
+        const formData = new FormData();
+        formData.append('file', arquivoAtual);
+        const resp = await fetch('/processar', { method: 'POST', body: formData });
+        const dados = await resp.json();
+        if (!resp.ok || !dados.sucesso) throw new Error(dados.erro || 'Falha no processamento.');
+
+        resultadoAtual = dados;
+        renderizarRevisao(dados);
+        mudarAba(1);
+      } catch (e) {
+        erroEl.textContent = e.message;
+        erroEl.style.display = 'block';
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Processar Arquivo';
+      }
+    }
+
+    function renderizarRevisao(dados) {
+      document.getElementById('revisaoVazia').style.display = 'none';
+      document.getElementById('revisaoConteudo').style.display = 'block';
+
+      const aprovado = dados.resumo.parecer === 'APROVADO';
+      const banner = document.getElementById('bannerParecer');
+      banner.className = 'banner ' + (aprovado ? 'aprovado' : 'reprovado');
+      banner.textContent = `PARECER FINAL: INSTRUMENTO ${dados.resumo.parecer}`;
+
+      document.getElementById('kpiTotal').textContent = dados.resumo.total;
+      document.getElementById('kpiDentro').textContent = dados.resumo.dentroDaTolerancia;
+      document.getElementById('kpiFora').textContent = dados.resumo.foraDaTolerancia;
+      document.getElementById('revCertId').textContent = dados.certificadoId;
+      document.getElementById('revEmissao').textContent = dados.dataEmissao;
+
+      document.getElementById('tabelaCotas').innerHTML = dados.pontos.map(p => {
+        const ok = p.situacao === 'DENTRO_DA_TOLERANCIA';
+        return `<tr>
+          <td>${p.caracteristica}</td>
+          <td>${fmtNum(p.nominal)}</td>
+          <td>${fmtNum(p.media)}</td>
+          <td>${fmtNum(p.erro)}</td>
+          <td>${fmtNum(p.toleranciaInferior)}</td>
+          <td>${fmtNum(p.toleranciaSuperior)}</td>
+          <td class="${ok ? 'ok' : 'nok'}">${ok ? 'DENTRO DA TOLERÂNCIA' : 'FORA DA TOLERÂNCIA'}</td>
+        </tr>`;
+      }).join('');
+    }
+
+    function baixarPdf() {
+      if (!resultadoAtual || !resultadoAtual.pdfBase64) return;
+      const bytes = Uint8Array.from(atob(resultadoAtual.pdfBase64), c => c.charCodeAt(0));
+      const blob = new Blob([bytes], { type: 'application/pdf' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `Certificado_${resultadoAtual.certificadoId}.pdf`;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    async function validarCertificado() {
+      const codigo = document.getElementById('codigoValidar').value.trim();
+      const erroEl = document.getElementById('erroValidacao');
+      const resEl = document.getElementById('resultadoValidacao');
+      erroEl.style.display = 'none';
+      resEl.style.display = 'none';
+
+      if (!codigo) {
+        erroEl.textContent = 'Informe o código do certificado.';
+        erroEl.style.display = 'block';
+        return;
+      }
+      try {
+        const resp = await fetch('/processar?id=' + encodeURIComponent(codigo));
+        const dados = await resp.json();
+        if (!resp.ok || !dados.valido) throw new Error(dados.erro || 'Certificado inválido.');
+
+        const c = dados.certificado;
+        const ok = c.resumo.parecer === 'APROVADO';
+        resEl.innerHTML = `<div class="banner ${ok ? 'aprovado' : 'reprovado'}" style="text-align:left; font-weight:400; font-size:14px;">
+          <strong style="font-size:15px;">CERTIFICADO VÁLIDO</strong><br><br>
+          <strong>Código:</strong> ${c.certificadoId}<br>
+          <strong>Emissão:</strong> ${c.dataEmissao}<br>
+          <strong>Instrumento:</strong> ${c.metadados.tagPatrimonial} — ${c.metadados.denominacao}<br>
+          <strong>Arquivo de origem:</strong> ${c.arquivoOrigem}<br>
+          <strong>Parecer:</strong> <strong>${c.resumo.parecer}</strong><br>
+          <strong>Hash SHA-256:</strong> <span style="font-size:12px;">${c.hashValidacao}</span>
+        </div>`;
+        resEl.style.display = 'block';
+      } catch (e) {
+        erroEl.textContent = e.message;
+        erroEl.style.display = 'block';
+      }
+    }
+
+    async function carregarHistorico() {
+      const lista = document.getElementById('listaHistorico');
+      try {
+        const resp = await fetch('/processar');
+        const dados = await resp.json();
+        if (!dados.historico || !dados.historico.length) {
+          lista.innerHTML = '<p style="color:#718096;">Nenhum certificado emitido até o momento.</p>';
+          return;
+        }
+        lista.innerHTML = dados.historico.map(item => {
+          const ok = item.resumo.parecer === 'APROVADO';
+          return `<div class="hist-item">
+            <div>
+              <strong>${item.certificadoId}</strong>
+              <button style="margin-left:8px; padding:2px 8px; font-size:11px; cursor:pointer;" onclick="navigator.clipboard.writeText('${item.certificadoId}')">Copiar</button><br>
+              <span style="font-size:12px; color:#718096;">${item.dataEmissao} — ${item.arquivoOrigem}</span>
+            </div>
+            <strong class="${ok ? 'ok' : 'nok'}">${item.resumo.parecer}</strong>
+          </div>`;
+        }).join('');
+      } catch {
+        lista.innerHTML = '<p class="nok">Não foi possível carregar o histórico.</p>';
+      }
+    }
+  </script>
+</body>
+</html>

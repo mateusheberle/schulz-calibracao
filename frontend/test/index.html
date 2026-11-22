@@ -1,0 +1,699 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Schulz S.A. - Plataforma Gestora de Calibração (AV 04)</title>
+    <!-- Fonte Oficial e Ícones -->
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        :root {
+            --schulz-blue-dark: #002B49;
+            --schulz-blue-light: #004B87;
+            --schulz-orange: #E35205;
+            --schulz-orange-hover: #C64300;
+            --bg-gray: #F4F6F9;
+            --card-white: #FFFFFF;
+            --text-dark: #2D3748;
+            --text-muted: #718096;
+            --border-color: #E2E8F0;
+            
+            /* Status Metrológicos */
+            --status-green-bg: #C6F6D5;
+            --status-green-text: #22543D;
+            --status-green-border: #38A169;
+            
+            --status-red-bg: #FED7D7;
+            --status-red-text: #742A2A;
+            --status-red-border: #E53E3E;
+            
+            --status-yellow-bg: #FEFCBF;
+            --status-yellow-text: #744210;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Roboto', sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-gray);
+            color: var(--text-dark);
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+
+        /* Topbar Institucional Schulz */
+        header {
+            background: linear-gradient(135deg, var(--schulz-blue-dark) 0%, var(--schulz-blue-light) 100%);
+            color: white;
+            padding: 0 2rem;
+            height: 70px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+
+        .brand-container {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .brand-logo {
+            font-size: 1.8rem;
+            font-weight: 900;
+            letter-spacing: 2px;
+            color: white;
+            text-transform: uppercase;
+            border-right: 2px solid rgba(255,255,255,0.3);
+            padding-right: 15px;
+        }
+
+        .brand-logo span {
+            color: var(--schulz-orange);
+        }
+
+        .system-title {
+            font-size: 1rem;
+            font-weight: 400;
+            opacity: 0.9;
+        }
+
+        .user-profile {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 0.9rem;
+        }
+
+        .avatar {
+            width: 38px;
+            height: 38px;
+            border-radius: 50%;
+            background-color: var(--schulz-orange);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+        }
+
+        /* Container Principal com Sidebar e Conteúdo */
+        .main-wrapper {
+            display: flex;
+            flex: 1;
+        }
+
+        /* Navegação Lateral */
+        nav {
+            width: 250px;
+            background-color: var(--card-white);
+            border-right: 1px solid var(--border-color);
+            padding: 1.5rem 0;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .nav-list {
+            list-style: none;
+        }
+
+        .nav-item {
+            padding: 12px 24px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            color: var(--text-muted);
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            border-left: 4px solid transparent;
+        }
+
+        .nav-item:hover, .nav-item.active {
+            color: var(--schulz-blue-dark);
+            background-color: #F0F4F8;
+            border-left-color: var(--schulz-orange);
+        }
+
+        .nav-item i {
+            width: 20px;
+            font-size: 1.1rem;
+        }
+
+        .system-badge {
+            margin: 1rem;
+            padding: 1rem;
+            background-color: #EBF8FF;
+            border-radius: 8px;
+            border: 1px solid #BEE3F8;
+            font-size: 0.8rem;
+            color: #2B6CB0;
+        }
+
+        /* Área de Conteúdo Central */
+        main {
+            flex: 1;
+            padding: 2rem;
+            max-width: 1400px;
+        }
+
+        .page-header {
+            margin-bottom: 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .page-title {
+            font-size: 1.5rem;
+            color: var(--schulz-blue-dark);
+            font-weight: 700;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        /* Cards e Painéis */
+        .card {
+            background-color: var(--card-white);
+            border-radius: 10px;
+            border: 1px solid var(--border-color);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .card-title {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: var(--schulz-blue-dark);
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        /* Área de Upload (Drag & Drop) */
+        .dropzone {
+            border: 2px dashed #CBD5E0;
+            border-radius: 8px;
+            padding: 3rem 2rem;
+            text-align: center;
+            background-color: #FAFCFE;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .dropzone:hover {
+            border-color: var(--schulz-orange);
+            background-color: #FFFAF0;
+        }
+
+        .dropzone i {
+            font-size: 3rem;
+            color: var(--schulz-orange);
+            margin-bottom: 1rem;
+        }
+
+        .btn-primary {
+            background-color: var(--schulz-orange);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-primary:hover {
+            background-color: var(--schulz-orange-hover);
+        }
+
+        .btn-secondary {
+            background-color: var(--schulz-blue-dark);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        /* Tabelas Responsivas de Cotas */
+        .table-responsive {
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.9rem;
+        }
+
+        th {
+            background-color: #EDF2F7;
+            color: var(--schulz-blue-dark);
+            text-align: left;
+            padding: 12px 16px;
+            font-weight: 700;
+            border-bottom: 2px solid var(--border-color);
+        }
+
+        td {
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        tr:hover {
+            background-color: #F8FAFC;
+        }
+
+        /* Badges e Parecer Condicional */
+        .badge {
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            display: inline-block;
+        }
+
+        .badge-success {
+            background-color: var(--status-green-bg);
+            color: var(--status-green-text);
+            border: 1px solid var(--status-green-border);
+        }
+
+        .badge-danger {
+            background-color: var(--status-red-bg);
+            color: var(--status-red-text);
+            border: 1px solid var(--status-red-border);
+        }
+
+        /* Destaque do Parecer Final (Banner Institucional) */
+        .parecer-banner {
+            padding: 1.25rem 2rem;
+            border-radius: 8px;
+            font-size: 1.1rem;
+            font-weight: 700;
+            text-align: center;
+            margin: 1.5rem 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+            letter-spacing: 0.5px;
+        }
+
+        .parecer-banner.aprovado {
+            background-color: var(--status-green-bg);
+            color: var(--status-green-text);
+            border: 2px solid var(--status-green-border);
+        }
+
+        .parecer-banner.reprovado {
+            background-color: var(--status-red-bg);
+            color: var(--status-red-text);
+            border: 2px solid var(--status-red-border);
+        }
+
+        /* Validador QR Code Mobile Simulação */
+        .qr-scanner-box {
+            max-width: 450px;
+            margin: 0 auto;
+            text-align: center;
+        }
+
+        .scanner-viewfinder {
+            width: 100%;
+            height: 280px;
+            background-color: #1A202C;
+            border-radius: 12px;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            overflow: hidden;
+            margin-bottom: 1.5rem;
+            border: 3px solid var(--schulz-orange);
+        }
+
+        .scanner-line {
+            position: absolute;
+            width: 100%;
+            height: 3px;
+            background-color: var(--schulz-orange);
+            box-shadow: 0 0 15px var(--schulz-orange);
+            animation: scan 2s infinite ease-in-out;
+        }
+
+        @keyframes scan {
+            0% { top: 10%; }
+            50% { top: 90%; }
+            100% { top: 10%; }
+        }
+
+        /* Footer */
+        footer {
+            background-color: var(--card-white);
+            border-top: 1px solid var(--border-color);
+            padding: 1rem 2rem;
+            text-align: center;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin-top: auto;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Header Institucional Schulz S.A. -->
+    <header>
+        <div class="brand-container">
+            <div class="brand-logo">SCHULZ <span>S.A.</span></div>
+            <div class="system-title"><i class="fa-solid fa-microscope"></i> Laboratório Central de Metrologia</div>
+        </div>
+        <div class="user-profile">
+            <div>
+                <div style="font-weight: 700;">João Carlos Oliveira</div>
+                <div style="font-size: 0.75rem; opacity: 0.8; text-align: right;">Signatário Autorizado</div>
+            </div>
+            <div class="avatar">JC</div>
+        </div>
+    </header>
+
+    <div class="main-wrapper">
+        <!-- Menu Lateral -->
+        <nav>
+            <ul class="nav-list">
+                <li class="nav-item active" onclick="switchTab('tab-ingestao', this)">
+                    <i class="fa-solid fa-cloud-arrow-up"></i>
+                    <span>1. Ingestão (MMC)</span>
+                </li>
+                <li class="nav-item" onclick="switchTab('tab-revisao', this)">
+                    <i class="fa-solid fa-file-signature"></i>
+                    <span>2. Minuta & Revisão</span>
+                </li>
+                <li class="nav-item" onclick="switchTab('tab-qrcode', this)">
+                    <i class="fa-solid fa-qrcode"></i>
+                    <span>3. Validador QR Code</span>
+                </li>
+                <li class="nav-item" onclick="switchTab('tab-historico', this)">
+                    <i class="fa-solid fa-clock-rotate-left"></i>
+                    <span>4. Histórico AWS</span>
+                </li>
+            </ul>
+
+            <div class="system-badge">
+                <i class="fa-solid fa-shield-halved"></i> <strong>AWS Free Tier Active</strong><br>
+                Custo Atual: <strong>R$ 0,00</strong> (PoC)
+            </div>
+        </nav>
+
+        <!-- Área de Conteúdo Principais -->
+        <main>
+
+            <!-- TAB 1: INGESTÃO DE PLANILHAS DA MMC -->
+            <div id="tab-ingestao" class="tab-content active">
+                <div class="page-header">
+                    <h1 class="page-title">Ingestão de Arquivo de Medição (MMC Carl Zeiss)</h1>
+                </div>
+
+                <div class="card">
+                    <div class="card-title"><i class="fa-solid fa-file-excel"></i> Upload do Relatório de Ensaio (.xlsx / .txt)</div>
+                    
+                    <div class="dropzone" onclick="simularUpload()">
+                        <i class="fa-solid fa-cloud-arrow-up"></i>
+                        <h3>Arraste e solte a planilha da MMC aqui</h3>
+                        <p style="color: var(--text-muted); margin: 8px 0 15px;">Compatível com saídas brutas da MMC Tag 500.011</p>
+                        <button class="btn-primary"><i class="fa-solid fa-folder-open"></i> Selecionar Arquivo do Computador</button>
+                    </div>
+
+                    <div id="upload-progress" style="display: none; margin-top: 1.5rem;">
+                        <p><strong>Processando sanitização ETL e margem float ($1 \times 10^{-7}$)...</strong></p>
+                        <div style="background-color: #E2E8F0; border-radius: 10px; height: 8px; margin-top: 8px; overflow: hidden;">
+                            <div style="background-color: var(--schulz-orange); width: 100%; height: 100%; animation: pulse 1.5s infinite;"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-title"><i class="fa-solid fa-circle-info"></i> Metadados do Instrumento Detectados</div>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+                        <div><strong style="color: var(--text-muted);">Tag Patrimonial:</strong><br> 703.1208</div>
+                        <div><strong style="color: var(--text-muted);">Denominação:</strong><br> Dispositivo de Controle</div>
+                        <div><strong style="color: var(--text-muted);">Setor Solicitante:</strong><br> Usinagem I</div>
+                        <div><strong style="color: var(--text-muted);">Padrão Vinculado:</strong><br> MMC Carl Zeiss (500.011)</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 2: MINUTA E CONFERÊNCIA DO REVISOR -->
+            <div id="tab-revisao" class="tab-content">
+                <div class="page-header">
+                    <h1 class="page-title">Conferência Metrológica & Emissão Definitiva</h1>
+                    <button class="btn-primary" onclick="alert('Certificado finalizado e armazenado no S3 com Object Lock!')">
+                        <i class="fa-solid fa-check-double"></i> Chancelar e Emitir PDF Final
+                    </button>
+                </div>
+
+                <!-- Banner Dinâmico de Parecer Condicional -->
+                <div id="banner-parecer" class="parecer-banner aprovado">
+                    <i class="fa-solid fa-circle-check" style="font-size: 1.5rem;"></i>
+                    PARECER FINAL: INSTRUMENTO APROVADO
+                </div>
+
+                <div style="margin-bottom: 1rem; display: flex; gap: 10px;">
+                    <button class="btn-secondary" style="font-size: 0.8rem;" onclick="alternarParecer(true)">Simular Tudo Conforme (Aprovado)</button>
+                    <button class="btn-secondary" style="font-size: 0.8rem; background-color: #E53E3E;" onclick="alternarParecer(false)">Simular Cota Fora (Reprovado)</button>
+                </div>
+
+                <div class="card">
+                    <div class="card-title"><i class="fa-solid fa-list-check"></i> Avaliação das Cotas Dimensionais (Análise de Tolerância $1 \times 10^{-7}$)</div>
+                    
+                    <div class="table-responsive">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Parâmetro Avaliado</th>
+                                    <th>Nominal (mm)</th>
+                                    <th>Tol. (-)</th>
+                                    <th>Tol. (+)</th>
+                                    <th>Medição 1 ($M_1$)</th>
+                                    <th>Medição 2 ($M_2$)</th>
+                                    <th>Média obtida</th>
+                                    <th>Erro Medido</th>
+                                    <th>Status Cota</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tabela-cotas">
+                                <tr>
+                                    <td><strong>62P_DIÂMETRO 1</strong></td>
+                                    <td>6.0000</td>
+                                    <td>-0.0500</td>
+                                    <td>+0.0500</td>
+                                    <td>6.0078</td>
+                                    <td>6.0080</td>
+                                    <td>6.0079</td>
+                                    <td>+0.0079</td>
+                                    <td><span class="badge badge-success">APROVADO</span></td>
+                                </tr>
+                                <tr>
+                                    <td><strong>PLANICIDADE_REF</strong></td>
+                                    <td>0.0000</td>
+                                    <td>0.0000</td>
+                                    <td>+0.0200</td>
+                                    <td>0.0042</td>
+                                    <td>0.0044</td>
+                                    <td>0.0043</td>
+                                    <td>+0.0043</td>
+                                    <td><span class="badge badge-success">APROVADO</span></td>
+                                </tr>
+                                <tr id="cota-variavel">
+                                    <td><strong>106P_POSIÇÃO 1</strong></td>
+                                    <td>0.0000</td>
+                                    <td>0.0000</td>
+                                    <td>+0.0500</td>
+                                    <td>0.0132</td>
+                                    <td>0.0130</td>
+                                    <td>0.0131</td>
+                                    <td>+0.0131</td>
+                                    <td><span class="badge badge-success">APROVADO</span></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 3: VALIDADOR DE QR CODE PARA CHÃO DE FÁBRICA -->
+            <div id="tab-qrcode" class="tab-content">
+                <div class="page-header">
+                    <h1 class="page-title">Validação Rápida via QR Code (Chão de Fábrica)</h1>
+                </div>
+
+                <div class="card qr-scanner-box">
+                    <div class="card-title" style="justify-content: center;">
+                        <i class="fa-solid fa-camera"></i> Posicione o QR Code do Instrumento
+                    </div>
+
+                    <div class="scanner-viewfinder">
+                        <div class="scanner-line"></div>
+                        <i class="fa-solid fa-qrcode" style="font-size: 6rem; opacity: 0.2;"></i>
+                    </div>
+
+                    <button class="btn-primary" onclick="simularLeituraQR()">
+                        <i class="fa-solid fa-bolt"></i> Simular Leitura do QR Code
+                    </button>
+                </div>
+
+                <!-- Modal / Resultado da Leitura do QR Code -->
+                <div id="resultado-qr" class="card" style="display: none; border-left: 6px solid var(--status-green-border);">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <h2 style="color: var(--status-green-text);"><i class="fa-solid fa-shield-check"></i> INSTRUMENTO CALIBRADO E APTO</h2>
+                        <span class="badge badge-success">VÁLIDO ATÉ 31/08/2026</span>
+                    </div>
+                    <hr style="margin: 1rem 0; border: none; border-top: 1px solid var(--border-color);">
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 15px; font-size: 0.9rem;">
+                        <div><strong>Tag Instrumento:</strong> 703.1208</div>
+                        <div><strong>Certificado nº:</strong> 00091/2026</div>
+                        <div><strong>Incerteza Expandida:</strong> 0.0028 mm ($k=2,23$)</div>
+                        <div><strong>Signatário:</strong> João Carlos Gomes</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 4: HISTÓRICO & GESTÃO CLOUD -->
+            <div id="tab-historico" class="tab-content">
+                <div class="page-header">
+                    <h1 class="page-title">Histórico de Certificados & Auditabilidade AWS</h1>
+                </div>
+
+                <div class="card">
+                    <div class="card-title"><i class="fa-solid fa-database"></i> Registros Persistidos no Amazon DynamoDB</div>
+                    
+                    <div class="table-responsive">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Certificado</th>
+                                    <th>Data / Hora</th>
+                                    <th>Tag Instrumento</th>
+                                    <th>Versão</th>
+                                    <th>Parecer Global</th>
+                                    <th>Hash SHA-256 (PDF)</th>
+                                    <th>Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><strong>#00091/2026</strong></td>
+                                    <td>26/08/2026 16:47</td>
+                                    <td>703.1208</td>
+                                    <td>v1.0 (Final)</td>
+                                    <td><span class="badge badge-success">APROVADO</span></td>
+                                    <td><code style="font-size: 0.75rem;">e3b0c44298fc1c149afbf4c8...</code></td>
+                                    <td>
+                                        <button class="btn-primary" style="padding: 4px 8px; font-size: 0.8rem;">
+                                            <i class="fa-solid fa-file-pdf"></i> PDF
+                                        </button>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td><strong>#00090/2026</strong></td>
+                                    <td>25/08/2026 10:12</td>
+                                    <td>500.011</td>
+                                    <td>v1.0 (Final)</td>
+                                    <td><span class="badge badge-danger">REPROVADO</span></td>
+                                    <td><code style="font-size: 0.75rem;">8f434346648f6b96df89dda9...</code></td>
+                                    <td>
+                                        <button class="btn-primary" style="padding: 4px 8px; font-size: 0.8rem;">
+                                            <i class="fa-solid fa-file-pdf"></i> PDF
+                                        </button>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+    <!-- Rodapé Institucional -->
+    <footer>
+        SCHULZ S.A. - Planta Joinville/SC | Projeto Aplicado III - UniSENAI Digital (Equipe nº 03)
+    </footer>
+
+    <!-- Lógica JavaScript para Interatividade do Protótipo -->
+    <script>
+        // Alternar entre Abas do Sistema
+        function switchTab(tabId, element) {
+            document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
+            
+            document.getElementById(tabId).classList.add('active');
+            element.classList.add('active');
+        }
+
+        // Simulação de Upload de Planilha
+        function simularUpload() {
+            const progress = document.getElementById('upload-progress');
+            progress.style.display = 'block';
+            setTimeout(() => {
+                progress.style.display = 'none';
+                alert('Planilha importada com sucesso! Redirecionando para a Minuta do Revisor.');
+                switchTab('tab-revisao', document.querySelectorAll('.nav-item')[1]);
+            }, 1200);
+        }
+
+        // Alternar entre Estado Aprovado e Reprovado
+        function alternarParecer(isAprovado) {
+            const banner = document.getElementById('banner-parecer');
+            const cotaVariavel = document.getElementById('cota-variavel');
+
+            if (isAprovado) {
+                banner.className = "parecer-banner aprovado";
+                banner.innerHTML = '<i class="fa-solid fa-circle-check" style="font-size: 1.5rem;"></i> PARECER FINAL: INSTRUMENTO APROVADO';
+                cotaVariavel.cells[6].innerText = "0.0131";
+                cotaVariavel.cells[7].innerText = "+0.0131";
+                cotaVariavel.cells[8].innerHTML = '<span class="badge badge-success">APROVADO</span>';
+            } else {
+                banner.className = "parecer-banner reprovado";
+                banner.innerHTML = '<i class="fa-solid fa-triangle-exclamation" style="font-size: 1.5rem;"></i> PARECER FINAL: INSTRUMENTO REPROVADO';
+                cotaVariavel.cells[6].innerText = "0.0820";
+                cotaVariavel.cells[7].innerText = "+0.0820";
+                cotaVariavel.cells[8].innerHTML = '<span class="badge badge-danger">REPROVADO</span>';
+            }
+        }
+
+        // Simulação da Câmera do QR Code
+        function simularLeituraQR() {
+            document.getElementById('resultado-qr').style.display = 'block';
+        }
+    </script>
+</body>
+</html>

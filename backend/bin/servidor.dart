@@ -3,7 +3,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
-import '../lib/processador_calibracao.dart';
+import 'package:backend/processador_calibracao.dart';
 
 const limiteBytes = 5 * 1024 * 1024;
 const origemFlutter = 'http://localhost:3000';
