@@ -1,166 +1,72 @@
-# Schulz — Análise de Calibração
+# Schulz S.A. — Automação da Emissão e Validação de Certificados de Calibração
 
-MVP desenvolvido para a atividade AV3 de Projeto Aplicado III, com o tema Automação da Emissão de Certificados de Calibração.
+Solução desenvolvida para o **Laboratório Central de Metrologia da Schulz S.A.** (Projeto Aplicado III — UniSENAI), consolidando as entregas da **AV 03** (Motor Metrológico), **AV 04** (Plataforma Web e Validador QR Code em Nuvem) e **AV 05** (Executável Local Automatizado `.bat`).
 
-A aplicação recebe uma planilha no modelo Registro MMC, calcula a média das leituras e o erro por característica, verifica as tolerâncias e apresenta o parecer final.
+A aplicação automatiza a ingestão de planilhas `.xlsx` exportadas pelas Máquinas de Medição por Coordenadas (MMC), realiza o saneamento de dados e os cálculos metrológicos, emite o Certificado de Calibração oficial em PDF com QR Code vetorial e permite a validação instantânea de autenticidade no chão de fábrica.
 
-## Tecnologias
+* **Repositório Público (GitHub):** https://github.com/mateusheberle/schulz-calibracao
+* **Plataforma Web em Nuvem (AWS CloudFront):** https://d2cwb6y5q96t5q.cloudfront.net
 
-- Flutter Web: interface.
-- Dart: API HTTP e processamento.
-- `excel`: leitura de arquivos `.xlsx`.
-- `file_picker`: seleção de arquivos.
-- `http`: comunicação entre frontend e backend.
+---
 
-## Fluxo da aplicação
+## Tecnologias e Arquitetura
 
-1. O usuário seleciona uma planilha `.xlsx`.
-2. O frontend envia os bytes para a API.
-3. O backend valida a estrutura e as medições.
-4. O processador calcula médias, erros e classificações.
-5. A API retorna os resultados em JSON.
-6. A interface apresenta os pontos avaliados e o parecer final.
+* **Execução Local Automatizada (AV 05):**
+  * `iniciar_aplicacao_schulz.bat`: script Windows para verificação de ambiente, criação de `venv`, instalação de dependências e inicialização automática.
+  * **Python 3.10+ & Flask (`app.py`):** servidor web local (`http://127.0.0.1:5000`), API REST (`/processar`) e persistência local em JSON (`certificados_db.json`).
+  * **Pandas & OpenPyXL:** reparo de estrutura OpenXML, detecção dinâmica de cabeçalho e higienização de planilhas `.xlsx`.
+  * **ReportLab:** geração vetorial do certificado PDF e do QR Code de rastreabilidade.
+  * **HTML/CSS/JS (`templates/index.html`):** interface web local responsiva em 4 etapas.
+* **Arquitetura Cloud Serverless (AV 04):**
+  * **Frontend (`frontend/`):** Flutter Web hospedado no Amazon S3 com distribuição HTTPS via CloudFront.
+  * **Backend (`backend/`):** AWS Lambda (Python), API Gateway e Amazon DynamoDB operando dentro do AWS Free Tier.
 
-O processamento ocorre em memória, sem armazenamento em banco de dados.
+---
 
-## Formato de entrada
-
-O MVP aceita arquivos de até 5 MiB no modelo Registro MMC:
-
-- Aba obrigatória: `Report`.
-- Cabeçalho na linha 13.
-- Dados a partir da linha 14.
-- Exatamente duas leituras por característica.
-- Nominal e tolerâncias iguais nas duas leituras.
-
-Colunas esperadas:
-
-| Coluna | Cabeçalho | Uso |
-|---|---|---|
-| A | Characteristic | Identificação da característica |
-| B | Actual | Leitura medida |
-| C | Nominal | Referência utilizada no cálculo |
-| D | Upper Tol | Limite superior do erro |
-| E | Lower Tol | Limite inferior do erro |
-| F | Deviation | Não utilizado no cálculo; o erro é recalculado |
-
-## Regras de cálculo
-
-Para cada característica:
-
-```text
-Média = (leitura 1 + leitura 2) / 2
-Erro = média − nominal
-```
-
-O ponto está dentro da tolerância quando:
-
-```text
-tolerância inferior ≤ erro ≤ tolerância superior
-```
-
-A comparação inclui os limites e utiliza uma margem computacional de
-`1e-12` para imprecisões de ponto flutuante. Essa margem não representa
-incerteza de medição.
-
-O parecer final será:
-
-- `APROVADO`: todos os pontos dentro da tolerância.
-- `REPROVADO`: pelo menos um ponto fora da tolerância.
-
-### Relação com o material da atividade
-
-A Aula 02, páginas 7 e 8, apresenta a comparação do valor obtido com:
-
-```text
-Limite mínimo = nominal − |Tol. −|
-Limite máximo = nominal + |Tol. +|
-```
-
-Para as tolerâncias fornecidas no Registro MMC, com limite inferior
-negativo ou zero e superior positivo, essa regra equivale à comparação
-do erro utilizada pelo MVP.
-
-Quando os limites são simétricos, a comparação também equivale a
-`|erro| ≤ LEA`. Para os intervalos unilaterais, são preservados os
-limites da planilha.
-
-O MVP não inclui a incerteza de medição na decisão.
-
-## Como executar
+## Como Executar Localmente (Script `.bat` — AV 05)
 
 ### Pré-requisitos
+* Sistema operacional **Windows 10 ou 11**.
+* **Python 3.10 ou superior** instalado e configurado no `PATH` do sistema (*"Add Python to PATH"*).
 
-- Flutter com suporte Web.
-- Dart compatível com a restrição `^3.8.1`.
-- Google Chrome.
-- Git, caso o projeto seja obtido por clonagem.
+### Passo a passo
 
-### Obter o projeto
+1. **Obter o repositório:**
+   ```powershell
+   git clone https://github.com/mateusheberle/schulz-calibracao
+   cd schulz-calibracao
+   ```
+   *(Ou baixe o arquivo `.zip` pelo botão **Code > Download ZIP** no GitHub e extraia a pasta.)*
 
-```bash
-git clone https://github.com/mateusheberle/schulz-calibracao.git
-cd schulz-calibracao
-```
+2. **Iniciar a aplicação com um duplo clique:**
+   * Na pasta raiz do projeto, dê um duplo clique em **`iniciar_aplicacao_schulz.bat`**.
+   * O script validará o Python 3.10+, criará o ambiente virtual `venv/`, instalará os pacotes listados em `requirements.txt` e abrirá automaticamente o navegador em **`http://127.0.0.1:5000`**.
 
-### Iniciar o backend
+3. **Processar planilha e emitir certificado:**
+   * Na aba **1. Ingestão (MMC)**, selecione uma das planilhas de teste disponíveis na pasta `templates/planilhas teste/`.
+   * Na aba **2. Minuta & Revisão**, confira as cotas processadas, o parecer final e clique em **Baixar Certificado Oficial (PDF com QR Code)**.
+   * Na aba **3. Validador QR Code**, informe o código gerado (`SCH-AAAA-XXXXXX`) para validar a autenticidade e o hash SHA-256 do certificado.
 
-Em um terminal, a partir da raiz do projeto:
+---
 
-```bash
-cd backend
-dart pub get
-dart run bin/servidor.dart
-```
+## Regras de Ingestão e Cálculos Metrológicos
 
-Verificação da API:
+1. **Saneamento OpenXML e Limpeza:** O motor converte *namespaces* XML *Strict* para *Transitional* (compatibilidade com exportações MMC Carl Zeiss), localiza dinamicamente a linha de cabeçalho e descarta linhas vazias ou notas de rodapé.
+2. **Média das Leituras ($\bar{x}$) e Erro Sistemático ($E$):**
+   ```text
+   Média (x̄) = (leitura 1 + leitura 2) / 2   [ou valor consolidado na coluna Actual]
+   Erro (E)  = x̄ − Valor Nominal
+   ```
+3. **Validação contra o Limite de Erro Admissível (LEA):**
+   ```text
+   Tol. Inferior − 1e-7 ≤ Erro ≤ Tol. Superior + 1e-7
+   ```
+   *(A margem numérica `1e-7` evita falsos negativos por arredondamento de ponto flutuante e não substitui a incerteza de medição declarada no certificado.)*
+4. **Parecer Metrológico Global:**
+   * **`APROVADO`:** 100% das características avaliadas estão dentro da faixa de tolerância.
+   * **`REPROVADO`:** uma ou mais características estão fora da tolerância.
 
-http://127.0.0.1:8080/saude
-
-Resposta esperada:
-
-```json
-{"status":"ok"}
-```
-
-Mantenha esse terminal aberto.
-
-### Iniciar o frontend
-
-Em outro terminal, a partir da raiz do projeto:
-
-```bash
-cd frontend
-flutter pub get
-flutter run -d chrome --web-hostname localhost --web-port 3000
-```
-
-A origem permitida pela API é `http://localhost:3000`.
-Use esse endereço e essa porta para executar a interface.
-
-### Processar a planilha
-
-1. Clique em **Selecionar Excel**.
-2. Escolha `backend/exemplos/registro_mmc.xlsx`.
-3. Clique em **Processar planilha**.
-
-Resultado esperado para a planilha original:
-
-| Características | Dentro | Fora | Parecer |
-|---:|---:|---:|---|
-| 14 | 8 | 6 | REPROVADO |
-
-## Rotas da API
-
-| Método | Rota | Finalidade |
-|---|---|---|
-| GET | `/saude` | Verificar disponibilidade |
-| POST | `/calibracoes/processar` | Processar o Excel |
-
-O POST recebe os bytes do arquivo no corpo da requisição, com
-`Content-Type: application/octet-stream`. Não utiliza formulário multipart.
-
-Arquivos inválidos são rejeitados, sem emissão de parecer.
+---
 
 ## Evidências
 
