@@ -118,17 +118,6 @@ void main() {
       MaterialApp(
         home: Scaffold(
           body: QrcodeView(
-            resultado: {
-              'pontos': [
-                {
-                  'caracteristica': 'Cota A',
-                  'nominal': 10.0,
-                  'media': 10.1,
-                  'erro': 0.1,
-                  'situacao': 'DENTRO_DA_TOLERANCIA',
-                },
-              ],
-            },
           ),
         ),
       ),
@@ -152,14 +141,6 @@ void main() {
       MaterialApp(
         home: Scaffold(
           body: QrcodeView(
-            resultado: {
-              'pontos': [
-                {
-                  'caracteristica': 'Cota A',
-                  'situacao': 'DENTRO_DA_TOLERANCIA',
-                },
-              ],
-            },
           ),
         ),
       ),

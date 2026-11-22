@@ -1,406 +1,224 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
-
+import 'package:http/http.dart' as http;
+import 'package:mobile_scanner/mobile_scanner.dart';
 import '../theme/app_theme.dart';
 
 class QrcodeView extends StatefulWidget {
-  const QrcodeView({this.resultado, super.key});
-
-  final Map<String, dynamic>? resultado;
+  const QrcodeView({super.key});
 
   @override
   State<QrcodeView> createState() => _QrcodeViewState();
 }
 
 class _QrcodeViewState extends State<QrcodeView> {
-  final TextEditingController _codeController = TextEditingController();
-  Map<dynamic, dynamic>? _pontoEncontrado;
-  bool _buscaExecutada = false;
+  static final _url = Uri.parse(
+    'https://yj7d8y9al3.execute-api.us-east-2.amazonaws.com/processar',
+  );
+  final _codigo = TextEditingController();
+  Map<String, dynamic>? _certificado;
+  String? _erro;
+  bool _consultando = false;
+  bool _cameraAtiva = false;
 
   @override
   void dispose() {
-    _codeController.dispose();
+    _codigo.dispose();
     super.dispose();
   }
 
-  Map<dynamic, dynamic> _mapa(dynamic valor) =>
-      valor is Map ? valor : const <dynamic, dynamic>{};
+  String _extrairCodigo(String entrada) {
+    final texto = entrada.trim();
+    if (texto.startsWith('SCHULZ-CERT|')) {
+      final partes = texto.split('|');
+      if (partes.length >= 2) return partes[1].trim();
+    }
+    return texto;
+  }
 
-  String _normalizar(String valor) =>
-      valor.trim().toLowerCase().replaceAll(RegExp(r'\s+'), '');
-
-  void _validarRegistroLocal() {
-    final consulta = _codeController.text.trim();
-    if (consulta.isEmpty) {
-      setState(() {
-        _buscaExecutada = true;
-        _pontoEncontrado = null;
-      });
+  Future<void> _consultar([String? valorLido]) async {
+    final id = _extrairCodigo(valorLido ?? _codigo.text);
+    if (id.isEmpty) {
+      setState(() => _erro = 'Informe o código do certificado.');
       return;
     }
 
-    final pontosBrutos =
-        widget.resultado?['pontos'] ?? widget.resultado?['caracteristicas'];
-    final pontos = pontosBrutos is List ? pontosBrutos : const <dynamic>[];
-    final chaveConsulta = _normalizar(consulta);
-    Map<dynamic, dynamic>? encontrado;
-
-    for (final item in pontos) {
-      final ponto = _mapa(item);
-      final chavePonto =
-          ponto['caracteristica'] ??
-          ponto['characteristic'] ??
-          ponto['nome'] ??
-          ponto['name'];
-      if (chavePonto != null &&
-          _normalizar(chavePonto.toString()) == chaveConsulta) {
-        encontrado = ponto;
-        break;
-      }
-    }
-
+    _codigo.text = id;
     setState(() {
-      _buscaExecutada = true;
-      _pontoEncontrado = encontrado;
+      _consultando = true;
+      _cameraAtiva = false;
+      _erro = null;
+      _certificado = null;
     });
-  }
 
-  String _formatarNumero(dynamic valor) {
-    if (valor is num && valor.isFinite) {
-      return valor.toStringAsFixed(7).replaceAll('.', ',');
-    }
-    if (valor is String) {
-      final numero = num.tryParse(valor.trim().replaceAll(',', '.'));
-      if (numero != null && numero.isFinite) {
-        return numero.toStringAsFixed(7).replaceAll('.', ',');
+    try {
+      final resposta = await http
+          .get(_url.replace(queryParameters: {'id': id}))
+          .timeout(const Duration(seconds: 30));
+      final dados =
+          jsonDecode(utf8.decode(resposta.bodyBytes)) as Map<String, dynamic>;
+
+      if (resposta.statusCode != 200 || dados['valido'] != true) {
+        throw Exception(dados['erro'] ?? 'Certificado inválido.');
       }
-    }
-    return 'Não informado';
-  }
 
-  bool? _statusDoPonto(Map<dynamic, dynamic> ponto) {
-    final status = (ponto['situacao'] ?? ponto['status'])
-        ?.toString()
-        .trim()
-        .toUpperCase();
-    if (status == 'DENTRO_DA_TOLERANCIA' ||
-        status == 'DENTRO DA TOLERÂNCIA' ||
-        status == 'OK') {
-      return true;
-    }
-    if (status == 'FORA_DA_TOLERANCIA' ||
-        status == 'FORA DA TOLERÂNCIA' ||
-        status == 'NOK') {
-      return false;
-    }
-    return null;
-  }
-
-  Widget _buildResultadoLocal() {
-    final ponto = _pontoEncontrado;
-    if (!_buscaExecutada) return const SizedBox.shrink();
-
-    if (_codeController.text.trim().isEmpty) {
-      return _buildAviso(
-        'Informe uma característica para consultar os dados da planilha carregada.',
-      );
-    }
-
-    if (widget.resultado == null) {
-      return _buildAviso(
-        'Não há medições carregadas. Processe uma planilha na aba Ingestão para realizar uma consulta demonstrativa.',
-      );
-    }
-
-    if (ponto == null) {
-      return _buildAviso(
-        'Nenhuma característica correspondente foi encontrada na planilha carregada. Esta consulta não pesquisa certificados emitidos.',
-        erro: true,
-      );
-    }
-
-    final situacao = _statusDoPonto(ponto);
-    final cor = situacao == true
-        ? AppTheme.verdeTexto
-        : situacao == false
-        ? AppTheme.vermelhoTexto
-        : const Color(0xFF8A4B08);
-    final fundo = situacao == true
-        ? AppTheme.verdeBg
-        : situacao == false
-        ? AppTheme.vermelhoBg
-        : const Color(0xFFFFF7E6);
-    final nome =
-        ponto['caracteristica'] ??
-        ponto['characteristic'] ??
-        ponto['nome'] ??
-        ponto['name'] ??
-        'Não identificada';
-
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: fundo,
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: cor.withValues(alpha: 0.35)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(
-                situacao == true
-                    ? Icons.check_circle_outline
-                    : situacao == false
-                    ? Icons.warning_amber_rounded
-                    : Icons.help_outline,
-                color: cor,
-                size: 20,
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  'Resultado local: ${situacao == true
-                      ? 'DENTRO DA TOLERÂNCIA'
-                      : situacao == false
-                      ? 'FORA DA TOLERÂNCIA'
-                      : 'STATUS INDISPONÍVEL'}',
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    color: cor,
-                    fontSize: 14,
-                  ),
-                ),
-              ),
-            ],
+      if (mounted) {
+        setState(
+          () => _certificado = Map<String, dynamic>.from(
+            dados['certificado'] as Map,
           ),
-          const Divider(height: 20),
-          Text(
-            'Característica: $nome',
-            style: TextStyle(color: cor, fontWeight: FontWeight.w600),
-          ),
-          Text(
-            'Valor nominal: ${_formatarNumero(ponto['nominal'])}',
-            style: TextStyle(color: cor),
-          ),
-          Text(
-            'Média calculada: ${_formatarNumero(ponto['media'] ?? ponto['mean'])}',
-            style: TextStyle(color: cor),
-          ),
-          Text(
-            'Erro: ${_formatarNumero(ponto['erro'] ?? ponto['deviation'])}',
-            style: TextStyle(color: cor),
-          ),
-          const SizedBox(height: 8),
-          const Text(
-            'Consulta demonstrativa dos dados da planilha atual. Não confirma autenticidade, assinatura ou validade de certificado.',
-            style: TextStyle(fontSize: 12, color: Color(0xFF64748B)),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildAviso(String mensagem, {bool erro = false}) {
-    final cor = erro ? AppTheme.vermelhoTexto : const Color(0xFF475569);
-    final fundo = erro ? AppTheme.vermelhoBg : const Color(0xFFF1F5F9);
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: fundo,
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(
-          color: erro ? AppTheme.vermelhoBorda : AppTheme.cinzaBorda,
-        ),
-      ),
-      child: Text(mensagem, style: TextStyle(color: cor, height: 1.4)),
-    );
+        );
+      }
+    } catch (erro) {
+      if (mounted) {
+        setState(() => _erro = 'Não foi possível validar o certificado: $erro');
+      }
+    } finally {
+      if (mounted) setState(() => _consultando = false);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+    final certificado = _certificado;
     return Center(
       child: SingleChildScrollView(
         padding: const EdgeInsets.all(24),
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 720),
           child: Card(
-            elevation: 1,
-            shadowColor: const Color(0x14002B49),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
-              side: const BorderSide(color: AppTheme.cinzaBorda),
-            ),
-            color: Colors.white,
             child: Padding(
               padding: const EdgeInsets.all(32),
               child: Column(
-                mainAxisSize: MainAxisSize.min,
                 children: [
-                  Container(
-                    padding: const EdgeInsets.all(18),
-                    decoration: BoxDecoration(
-                      color: AppTheme.azulEscuro.withValues(alpha: 0.06),
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(
-                      Icons.qr_code_scanner_rounded,
-                      size: 48,
-                      color: AppTheme.azulEscuro,
-                    ),
+                  const Icon(
+                    Icons.verified_user_outlined,
+                    size: 52,
+                    color: AppTheme.azulEscuro,
                   ),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 16),
                   Text(
                     'Validador de QR Code',
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.bold,
-                      color: AppTheme.azulEscuro,
-                      fontSize: 22,
-                    ),
-                    textAlign: TextAlign.center,
+                    style: Theme.of(context).textTheme.headlineSmall,
                   ),
                   const SizedBox(height: 8),
                   const Text(
-                    'Consulte uma característica da planilha de calibração carregada.',
+                    'Escaneie o QR Code com a câmera ou informe o código SCH-AAAA-XXXXXX.',
                     textAlign: TextAlign.center,
-                    style: TextStyle(
-                      color: Color(0xFF64748B),
-                      fontSize: 14,
-                      height: 1.4,
+                  ),
+                  const SizedBox(height: 16),
+                  OutlinedButton.icon(
+                    onPressed: () =>
+                        setState(() => _cameraAtiva = !_cameraAtiva),
+                    icon: Icon(
+                      _cameraAtiva ? Icons.videocam_off : Icons.qr_code_scanner,
+                    ),
+                    label: Text(
+                      _cameraAtiva ? 'Fechar câmera' : 'Ler QR Code com câmera',
                     ),
                   ),
-                  const SizedBox(height: 20),
-                  _buildAviso(
-                    'Modo demonstrativo: não há leitura por câmera nem serviço de consulta/autenticação de certificados conectado.',
-                  ),
-                  const SizedBox(height: 20),
-                  Container(
-                    padding: const EdgeInsets.all(20),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFF8FAFC),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: AppTheme.cinzaBorda),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'Consulta local demonstrativa',
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            color: AppTheme.azulEscuro,
-                            fontSize: 14,
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        LayoutBuilder(
-                          builder: (context, constraints) {
-                            final campo = TextField(
-                              controller: _codeController,
-                              textInputAction: TextInputAction.search,
-                              decoration: InputDecoration(
-                                hintText:
-                                    'Nome da característica (ex.: Cota A)',
-                                hintStyle: const TextStyle(
-                                  fontSize: 13,
-                                  color: Color(0xFF94A3B8),
-                                ),
-                                filled: true,
-                                fillColor: Colors.white,
-                                contentPadding: const EdgeInsets.symmetric(
-                                  horizontal: 14,
-                                  vertical: 12,
-                                ),
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(8),
-                                  borderSide: const BorderSide(
-                                    color: Color(0xFFCBD5E1),
-                                  ),
-                                ),
-                              ),
-                              onSubmitted: (_) => _validarRegistroLocal(),
-                            );
-                            final botao = FilledButton.icon(
-                              onPressed: _validarRegistroLocal,
-                              style: FilledButton.styleFrom(
-                                backgroundColor: AppTheme.azulEscuro,
-                                foregroundColor: Colors.white,
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 18,
-                                  vertical: 16,
-                                ),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                              ),
-                              icon: const Icon(Icons.search, size: 18),
-                              label: const Text('Consultar'),
-                            );
-
-                            if (constraints.maxWidth < 480) {
-                              return Column(
-                                crossAxisAlignment: CrossAxisAlignment.stretch,
-                                children: [
-                                  campo,
-                                  const SizedBox(height: 10),
-                                  botao,
-                                ],
-                              );
+                  if (_cameraAtiva) ...[
+                    const SizedBox(height: 16),
+                    SizedBox(
+                      height: 260,
+                      width: 320,
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(12),
+                        child: MobileScanner(
+                          onDetect: (captura) {
+                            final codigo = captura.barcodes.firstOrNull?.rawValue;
+                            if (codigo != null && !_consultando) {
+                              _consultar(codigo);
                             }
-                            return Row(
-                              children: [
-                                Expanded(child: campo),
-                                const SizedBox(width: 12),
-                                botao,
-                              ],
-                            );
                           },
                         ),
-                      ],
+                      ),
                     ),
-                  ),
-                  if (_buscaExecutada) ...[
-                    const SizedBox(height: 20),
-                    _buildResultadoLocal(),
                   ],
                   const SizedBox(height: 20),
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFF1F5F9),
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: AppTheme.cinzaBorda),
-                    ),
-                    child: const Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Icon(
-                          Icons.info_outline,
-                          color: Color(0xFF64748B),
-                          size: 18,
-                        ),
-                        SizedBox(width: 10),
-                        Expanded(
-                          child: Text(
-                            'Uma consulta oficial por Tag/Hash exige um cadastro de certificados e um serviço de validação. Esses recursos ainda não estão disponíveis nesta aplicação.',
-                            style: TextStyle(
-                              color: Color(0xFF475569),
-                              fontSize: 13,
-                              height: 1.4,
-                            ),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          controller: _codigo,
+                          onSubmitted: (_) => _consultar(),
+                          decoration: const InputDecoration(
+                            labelText: 'Código ou leitura do QR Code',
+                            border: OutlineInputBorder(),
                           ),
                         ),
-                      ],
-                    ),
+                      ),
+                      const SizedBox(width: 12),
+                      FilledButton(
+                        onPressed: _consultando ? null : _consultar,
+                        child: _consultando
+                            ? const SizedBox(
+                                height: 18,
+                                width: 18,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
+                              )
+                            : const Text('Validar'),
+                      ),
+                    ],
                   ),
+                  if (_erro != null)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 20),
+                      child: Text(
+                        _erro!,
+                        style: const TextStyle(color: AppTheme.vermelhoTexto),
+                      ),
+                    ),
+                  if (certificado != null) _resultado(certificado),
                 ],
               ),
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _resultado(Map<String, dynamic> certificado) {
+    final resumo = Map<String, dynamic>.from(
+      certificado['resumo'] as Map? ?? {},
+    );
+    final metadados = Map<String, dynamic>.from(
+      certificado['metadados'] as Map? ?? {},
+    );
+    final aprovado = resumo['parecer'] == 'APROVADO';
+
+    return Container(
+      margin: const EdgeInsets.only(top: 20),
+      padding: const EdgeInsets.all(18),
+      width: double.infinity,
+      decoration: BoxDecoration(
+        color: aprovado ? AppTheme.verdeBg : AppTheme.vermelhoBg,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'CERTIFICADO VÁLIDO',
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              color: aprovado ? AppTheme.verdeTexto : AppTheme.vermelhoTexto,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text('Código: ${certificado['certificadoId']}'),
+          Text('Emissão: ${certificado['dataEmissao']}'),
+          Text(
+            'Instrumento: ${metadados['tagPatrimonial'] ?? '-'} — '
+            '${metadados['denominacao'] ?? '-'}',
+          ),
+          Text('Arquivo de origem: ${certificado['arquivoOrigem'] ?? '-'}'),
+          Text('Parecer: ${resumo['parecer']}'),
+          Text('Hash: ${certificado['hashValidacao']}'),
+        ],
       ),
     );
   }

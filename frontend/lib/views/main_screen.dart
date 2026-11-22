@@ -5,8 +5,6 @@ import 'dart:typed_data';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
-import 'package:pdf/pdf.dart';
-import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 
 import '../theme/app_theme.dart';
@@ -24,7 +22,9 @@ class MainScreen extends StatefulWidget {
 }
 
 class _MainScreenState extends State<MainScreen> {
-  static final _url = Uri.parse('http://127.0.0.1:8080/calibracoes/processar');
+  static final _url = Uri.parse(
+    'https://yj7d8y9al3.execute-api.us-east-2.amazonaws.com/processar',
+  );
   static const _limite = 5 * 1024 * 1024;
 
   Uint8List? _bytes;
@@ -116,10 +116,14 @@ class _MainScreenState extends State<MainScreen> {
       final resposta = await cliente
           .post(
             _url,
-            headers: {'Content-Type': 'application/octet-stream'},
-            body: bytes,
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode({
+              'file': base64Encode(bytes),
+              'fileName': _nome ?? 'Registro_MMC.xlsx',
+            }),
           )
           .timeout(const Duration(seconds: 60));
+
       final dados = jsonDecode(utf8.decode(resposta.bodyBytes));
       if (dados is! Map<String, dynamic>) {
         throw const FormatException('Resposta inválida.');
@@ -153,9 +157,8 @@ class _MainScreenState extends State<MainScreen> {
       if (mounted) {
         setState(
           () => _erro =
-              'Não foi possível acessar a API. Verifique se o backend está '
-              'rodando na porta 8080 e se esta página está em '
-              'http://localhost:3000.',
+              'Não foi possível conectar ao servidor da AWS. '
+              'Verifique sua conexão com a internet.',
         );
       }
     } on FormatException {
@@ -187,24 +190,29 @@ class _MainScreenState extends State<MainScreen> {
     });
 
     try {
-      final documento = _criarDocumentoPdf(resultado);
-      final bytes = await documento.save();
-      final baseNome = (_nome ?? 'calibracao')
-          .replaceAll(RegExp(r'\.[^.]+$'), '')
-          .replaceAll(RegExp(r'[^A-Za-z0-9_-]+'), '_');
+      final pdfBase64 = resultado['pdfBase64']?.toString();
+      final certificadoId = resultado['certificadoId']?.toString();
+      if (pdfBase64 == null ||
+          pdfBase64.isEmpty ||
+          certificadoId == null ||
+          certificadoId.isEmpty) {
+        throw const FormatException(
+          'A API não retornou o certificado oficial.',
+        );
+      }
       await Printing.sharePdf(
-        bytes: bytes,
-        filename: 'rascunho_certificado_$baseNome.pdf',
+        bytes: base64Decode(pdfBase64),
+        filename: 'Certificado_$certificadoId.pdf',
       );
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Rascunho PDF pronto para salvar ou compartilhar.'),
+            content: Text('Certificado oficial pronto para baixar.'),
           ),
         );
       }
     } catch (erro, pilha) {
-      debugPrint('Falha ao gerar rascunho do certificado: $erro\n$pilha');
+      debugPrint('Falha ao baixar certificado oficial: $erro\n$pilha');
       if (mounted) {
         setState(
           () => _erroPdf =
@@ -214,300 +222,6 @@ class _MainScreenState extends State<MainScreen> {
     } finally {
       if (mounted) setState(() => _gerandoPdf = false);
     }
-  }
-
-  pw.Document _criarDocumentoPdf(Map<String, dynamic> resultado) {
-    final resumo = _pdfMap(resultado['resumo'] ?? resultado);
-    final pontosBrutos = resultado['pontos'] ?? resultado['caracteristicas'];
-    final pontos = pontosBrutos is List
-        ? pontosBrutos.map(_pdfMap).toList()
-        : <Map<dynamic, dynamic>>[];
-    final parecer =
-        _pdfObter(resumo, [
-          'parecer',
-          'parecerFinal',
-          'situacaoGeral',
-        ])?.toString().toUpperCase() ??
-        'INDISPONÍVEL';
-    final identificacao = _pdfMap(
-      _pdfObter(resultado, ['identificacao', 'instrumento', 'metadados']),
-    );
-    final responsavel = _pdfMap(
-      _pdfObter(resultado, ['responsavel', 'signatario', 'signatário']),
-    );
-    final tag = _pdfCampo(identificacao, resultado, [
-      'tagPatrimonial',
-      'tag_patrimonial',
-      'tag',
-      'assetTag',
-    ]);
-    final denominacao = _pdfCampo(identificacao, resultado, [
-      'denominacao',
-      'denominação',
-      'descricaoInstrumento',
-      'instrumentName',
-    ]);
-    final setor = _pdfCampo(identificacao, resultado, [
-      'setorSolicitante',
-      'setor_solicitante',
-      'setor',
-    ]);
-    final signatario = _pdfCampo(responsavel, resultado, [
-      'nome',
-      'signatario',
-      'signatário',
-      'responsavel',
-      'responsável',
-    ]);
-    final criterio =
-        _pdfObter(resultado, ['criterio', 'criterioAvaliacao'])?.toString() ??
-        'Tolerâncias inferior e superior, sem incerteza de medição.';
-
-    final documento = pw.Document();
-    documento.addPage(
-      pw.MultiPage(
-        pageFormat: PdfPageFormat.a4.landscape,
-        margin: const pw.EdgeInsets.all(28),
-        header: (context) => pw.Container(
-          padding: const pw.EdgeInsets.only(bottom: 8),
-          decoration: const pw.BoxDecoration(
-            border: pw.Border(
-              bottom: pw.BorderSide(color: PdfColor.fromInt(0xFF002B49)),
-            ),
-          ),
-          child: pw.Row(
-            mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-            children: [
-              pw.Text(
-                'SCHULZ S.A. | CERTIFICADO DE CALIBRACAO - RASCUNHO',
-                style: pw.TextStyle(
-                  color: PdfColor.fromInt(0xFF002B49),
-                  fontSize: 10,
-                  fontWeight: pw.FontWeight.bold,
-                ),
-              ),
-              pw.Text(
-                'SEM VALIDADE OFICIAL',
-                style: pw.TextStyle(
-                  color: PdfColor.fromInt(0xFFE35205),
-                  fontSize: 9,
-                  fontWeight: pw.FontWeight.bold,
-                ),
-              ),
-            ],
-          ),
-        ),
-        footer: (context) => pw.Container(
-          alignment: pw.Alignment.centerRight,
-          padding: const pw.EdgeInsets.only(top: 8),
-          child: pw.Text(
-            'Pagina ${context.pageNumber} de ${context.pagesCount}',
-            style: const pw.TextStyle(fontSize: 8),
-          ),
-        ),
-        build: (context) => [
-          pw.SizedBox(height: 14),
-          pw.Text(
-            'Relatorio de calibracao',
-            style: pw.TextStyle(fontSize: 20, fontWeight: pw.FontWeight.bold),
-          ),
-          pw.SizedBox(height: 8),
-          pw.Container(
-            width: double.infinity,
-            padding: const pw.EdgeInsets.all(10),
-            color: const PdfColor.fromInt(0xFFFFF3E0),
-            child: pw.Text(
-              'RASCUNHO PARA CONFERENCIA - NAO E UM CERTIFICADO OFICIAL. '
-              'A API atual nao fornece todos os dados de identificacao e '
-              'validacao do signatario.',
-              style: pw.TextStyle(
-                color: const PdfColor.fromInt(0xFF8A4B08),
-                fontSize: 9,
-                fontWeight: pw.FontWeight.bold,
-              ),
-            ),
-          ),
-          pw.SizedBox(height: 12),
-          pw.Table(
-            columnWidths: {
-              0: const pw.FlexColumnWidth(1),
-              1: const pw.FlexColumnWidth(1.3),
-              2: const pw.FlexColumnWidth(1),
-              3: const pw.FlexColumnWidth(1),
-              4: const pw.FlexColumnWidth(1),
-            },
-            border: pw.TableBorder.all(
-              color: const PdfColor.fromInt(0xFFE2E8F0),
-            ),
-            children: [
-              _pdfLinha([
-                'Tag patrimonial',
-                'Denominacao',
-                'Setor solicitante',
-                'Responsavel / signatario',
-                'Arquivo de origem',
-              ], cabecalho: true),
-              _pdfLinha([
-                tag,
-                denominacao,
-                setor,
-                signatario,
-                _nome ?? 'Nao informado',
-              ]),
-            ],
-          ),
-          pw.SizedBox(height: 10),
-          pw.Text(
-            'Parecer: $parecer | Total: ${_pdfObter(resumo, ['total', 'totalCaracteristicas']) ?? pontos.length} '
-            '| Dentro: ${_pdfObter(resumo, ['dentroDaTolerancia', 'dentro_da_tolerancia']) ?? '-'} '
-            '| Fora: ${_pdfObter(resumo, ['foraDaTolerancia', 'fora_da_tolerancia']) ?? '-'}',
-            style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold),
-          ),
-          pw.SizedBox(height: 4),
-          pw.Text(
-            'Criterio: $criterio',
-            style: const pw.TextStyle(fontSize: 9),
-          ),
-          pw.SizedBox(height: 12),
-          pw.Table(
-            border: pw.TableBorder.all(
-              color: const PdfColor.fromInt(0xFFCBD5E0),
-            ),
-            columnWidths: {
-              0: const pw.FlexColumnWidth(1.6),
-              1: const pw.FlexColumnWidth(0.9),
-              2: const pw.FlexColumnWidth(0.9),
-              3: const pw.FlexColumnWidth(0.9),
-              4: const pw.FlexColumnWidth(0.9),
-              5: const pw.FlexColumnWidth(0.9),
-              6: const pw.FlexColumnWidth(0.9),
-              7: const pw.FlexColumnWidth(0.9),
-              8: const pw.FlexColumnWidth(1.2),
-            },
-            children: [
-              _pdfLinha(const [
-                'Caracteristica',
-                'Leitura 1',
-                'Leitura 2',
-                'Nominal',
-                'Media',
-                'Erro',
-                'Tol. inferior',
-                'Tol. superior',
-                'Status',
-              ], cabecalho: true),
-              for (final ponto in pontos)
-                _pdfLinha([
-                  _pdfObter(ponto, [
-                        'caracteristica',
-                        'characteristic',
-                        'nome',
-                      ])?.toString() ??
-                      '-',
-                  _pdfNumero(ponto, ['leitura1', 'leitura_1', 'actual1']),
-                  _pdfNumero(ponto, ['leitura2', 'leitura_2', 'actual2']),
-                  _pdfNumero(ponto, ['nominal']),
-                  _pdfNumero(ponto, ['media', 'mean']),
-                  _pdfNumero(ponto, ['erro', 'deviation']),
-                  _pdfNumero(ponto, [
-                    'toleranciaInferior',
-                    'tolerancia_inferior',
-                    'lowerTol',
-                    'lower_tol',
-                  ]),
-                  _pdfNumero(ponto, [
-                    'toleranciaSuperior',
-                    'tolerancia_superior',
-                    'upperTol',
-                    'upper_tol',
-                  ]),
-                  _pdfSituacao(ponto),
-                ]),
-            ],
-          ),
-        ],
-      ),
-    );
-    return documento;
-  }
-
-  pw.TableRow _pdfLinha(List<String> valores, {bool cabecalho = false}) {
-    final corTexto = PdfColor.fromInt(cabecalho ? 0xFF002B49 : 0xFF263746);
-    return pw.TableRow(
-      decoration: cabecalho
-          ? const pw.BoxDecoration(color: PdfColor.fromInt(0xFFF1F5F9))
-          : null,
-      children: [
-        for (final valor in valores)
-          pw.Padding(
-            padding: const pw.EdgeInsets.all(5),
-            child: pw.Text(
-              valor,
-              style: pw.TextStyle(
-                color: corTexto,
-                fontSize: cabecalho ? 8 : 7.5,
-                fontWeight: cabecalho
-                    ? pw.FontWeight.bold
-                    : pw.FontWeight.normal,
-              ),
-            ),
-          ),
-      ],
-    );
-  }
-
-  Map<dynamic, dynamic> _pdfMap(dynamic valor) =>
-      valor is Map ? valor : const <dynamic, dynamic>{};
-
-  dynamic _pdfObter(Map<dynamic, dynamic> mapa, List<String> chaves) {
-    for (final chave in chaves) {
-      final valor = mapa[chave];
-      if (valor != null) return valor;
-    }
-    return null;
-  }
-
-  String _pdfCampo(
-    Map<dynamic, dynamic> preferencial,
-    Map<dynamic, dynamic> alternativa,
-    List<String> chaves,
-  ) {
-    final valor =
-        _pdfObter(preferencial, chaves) ?? _pdfObter(alternativa, chaves);
-    final texto = valor?.toString().trim();
-    return texto == null || texto.isEmpty ? 'Nao informado' : texto;
-  }
-
-  String _pdfNumero(Map<dynamic, dynamic> ponto, List<String> chaves) {
-    final valor = _pdfObter(ponto, chaves);
-    if (valor is num && valor.isFinite) {
-      return valor.toStringAsFixed(7).replaceAll('.', ',');
-    }
-    if (valor is String) {
-      final numero = num.tryParse(valor.trim().replaceAll(',', '.'));
-      if (numero != null && numero.isFinite) {
-        return numero.toStringAsFixed(7).replaceAll('.', ',');
-      }
-    }
-    return '-';
-  }
-
-  String _pdfSituacao(Map<dynamic, dynamic> ponto) {
-    final status = _pdfObter(ponto, [
-      'situacao',
-      'status',
-    ])?.toString().toUpperCase();
-    if (status == 'DENTRO_DA_TOLERANCIA' ||
-        status == 'DENTRO DA TOLERÂNCIA' ||
-        status == 'OK') {
-      return 'DENTRO DA TOLERANCIA';
-    }
-    if (status == 'FORA_DA_TOLERANCIA' ||
-        status == 'FORA DA TOLERÂNCIA' ||
-        status == 'NOK') {
-      return 'FORA DA TOLERANCIA';
-    }
-    return 'NAO CLASSIFICADA';
   }
 
   void _validarResposta(Map<String, dynamic> dados) {
@@ -578,7 +292,7 @@ class _MainScreenState extends State<MainScreen> {
           onGerarPdf: _gerarCertificadoPdf,
         );
       case 2:
-        return QrcodeView(resultado: _resultado);
+        return const QrcodeView();
       case 3:
         return const HistoricoView();
       default:
